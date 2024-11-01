@@ -1,53 +1,70 @@
 import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.labels.PieSectionLabelGenerator;
+import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
+import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.general.DefaultPieDataset;
+import org.jfree.data.general.PieDataset;
 
 import javax.swing.*;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public class ChartPanel extends JPanel {
+public class Chart extends JPanel {
 
     String chartTitle;
-    public ChartPanel()
+    DataController dataController;
+    public Chart(DataController dataController)
     {
-        JFreeChart barChart = ChartFactory.createBarChart(
-                chartTitle,
-                "Category",
-                "Score",
-                createDataset(),
-                PlotOrientation.VERTICAL,
-                true, true, false);
+        this.dataController = dataController;
+        JFreeChart pieChart = ChartFactory.createPieChart("Most Common Genres", createDataset() );
 
-        this.add(barChart);
+        // Percentage label details code courtest of Stack Overflow
+        // https://stackoverflow.com/questions/52314116/percentage-accuracy-issue-in-jfreechart-pie-chart
+        PieSectionLabelGenerator gen = new StandardPieSectionLabelGenerator(
+                "{0}: {1} ({2})", new DecimalFormat("0"), new DecimalFormat("0%"));
+        PiePlot plot = (PiePlot) pieChart.getPlot();
+
+
+        ChartPanel chartPanel = new ChartPanel(pieChart);
+        plot.setLabelGenerator(gen);
+        this.add(chartPanel);
     }
 
 
-    private CategoryDataset createDataset( ) {
-        final String fiat = "FIAT";
-        final String audi = "AUDI";
-        final String ford = "FORD";
-        final String speed = "Speed";
-        final String millage = "Millage";
-        final String userrating = "User Rating";
-        final String safety = "safety";
-        final DefaultCategoryDataset dataset =
-                new DefaultCategoryDataset( );
+    private PieDataset createDataset( ) {
+        String[][] data = dataController.getData();
+        ArrayList<String> genres = new ArrayList<>();
 
-        dataset.addValue( 1.0 , fiat , speed );
-        dataset.addValue( 3.0 , fiat , userrating );
-        dataset.addValue( 5.0 , fiat , millage );
-        dataset.addValue( 5.0 , fiat , safety );
 
-        dataset.addValue( 5.0 , audi , speed );
-        dataset.addValue( 6.0 , audi , userrating );
-        dataset.addValue( 10.0 , audi , millage );
-        dataset.addValue( 4.0 , audi , safety );
+        for (int i = 0; i < data.length; i++) {
+            genres.add(data[i][1]);
 
-        dataset.addValue( 4.0 , ford , speed );
-        dataset.addValue( 2.0 , ford , userrating );
-        dataset.addValue( 3.0 , ford , millage );
-        dataset.addValue( 6.0 , ford , safety );
+        }
+
+        Map<String, Long> genreCount = genres.stream()
+                .collect(Collectors.groupingBy(
+                        Function.identity(),
+                        Collectors.counting()
+                ));
+
+        final DefaultPieDataset dataset =
+                new DefaultPieDataset();
+
+        for (var key: genreCount.keySet())
+        {
+            dataset.setValue(key, genreCount.get(key));
+        }
+
+
 
         return dataset;
     }
